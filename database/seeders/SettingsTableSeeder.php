@@ -17,17 +17,17 @@ class SettingsTableSeeder extends Seeder
     {
         $setting=$this->findSetting("site.site_name");
         if (!$setting->exists) {
-            $setting->fill(["display_name"=> "Site Name", "value"=> "Eventmie Pro", "details"=> null, "type"=> "text", "order"=> "1", "group"=> "Site", ])->save();
+            $setting->fill(["display_name"=> "Site Name", "value"=> "WaziEvents", "details"=> null, "type"=> "text", "order"=> "1", "group"=> "Site", ])->save();
         }
 
         $setting=$this->findSetting("site.site_slogan");
         if (!$setting->exists) {
-            $setting->fill(["display_name"=> "Site Slogan", "value"=> "Host Events. Sell Tickets.", "details"=> null, "type"=> "text", "order"=> "2", "group"=> "Site", ])->save();
+            $setting->fill(["display_name"=> "Site Slogan", "value"=> "Discover. Experience. Celebrate.", "details"=> null, "type"=> "text", "order"=> "2", "group"=> "Site", ])->save();
         }
 
         $setting=$this->findSetting("site.site_footer");
         if (!$setting->exists) {
-            $setting->fill(["display_name"=> "Extra Footer Credits", "value"=> "Eventmie Pro <strong>v1.7<strong>. Product by <a href='https://www.classiebit.com' target='_blank'>Classiebit</a>", "details"=> null, "type"=> "text", "order"=> "2", "group"=> "Site", ])->save();
+            $setting->fill(["display_name"=> "Extra Footer Credits", "value"=> "WaziEvents &copy; ".date('Y')." | <a href='/terms'>Terms</a> | <a href='/privacy'>Privacy</a> | <a href='/refunds'>Refunds</a>", "details"=> null, "type"=> "text", "order"=> "2", "group"=> "Site", ])->save();
         }
 
         $setting=$this->findSetting("site.logo");
@@ -42,12 +42,12 @@ class SettingsTableSeeder extends Seeder
 
         $setting=$this->findSetting("seo.meta_title");
         if (!$setting->exists) {
-            $setting->fill(["display_name"=> "Meta Title", "value"=> "Eventmie Pro", "details"=> null, "type"=> "text", "order"=> "5", "group"=> "SEO", ])->save();
+            $setting->fill(["display_name"=> "Meta Title", "value"=> "WaziEvents | Events and Tickets in Kenya", "details"=> null, "type"=> "text", "order"=> "5", "group"=> "SEO", ])->save();
         }
 
         $setting=$this->findSetting("seo.meta_description");
         if (!$setting->exists) {
-            $setting->fill(["display_name"=> "Meta Description", "value"=> "eventmie", "details"=> null, "type"=> "text", "order"=> "7", "group"=> "SEO", ])->save();
+            $setting->fill(["display_name"=> "Meta Description", "value"=> "Discover events and book tickets across Kenya with WaziEvents.", "details"=> null, "type"=> "text", "order"=> "7", "group"=> "SEO", ])->save();
         }
 
         $setting=$this->findSetting("social.facebook");
@@ -82,7 +82,7 @@ class SettingsTableSeeder extends Seeder
 
         $setting=$this->findSetting("contact.email");
         if (!$setting->exists) {
-            $setting->fill(["display_name"=> "Email", "value"=> "info@eventmie.com", "details"=> null, "type"=> "text", "order"=> "14", "group"=> "Contact", ])->save();
+            $setting->fill(["display_name" => "Email", "value" => "hello@wazievents.co.ke", "details"=> null, "type" => "text", "order" => "14", "group" => "Contact", ])->save();
         }
 
         $setting=$this->findSetting("contact.google_map_lat");
@@ -310,13 +310,13 @@ class SettingsTableSeeder extends Seeder
 
         $setting = $this->findSetting("mail.mail_sender_name");
         if (!$setting->exists) {
-            $setting->fill(["display_name" => "Mail Sender Name", "value" => "Eventmie Pro", "details"=> null, "type" => "text", "order" => "43", "group" => "Mail", ])->save();
+            $setting->fill(["display_name" => "Mail Sender Name", "value" => "WaziEvents", "details"=> null, "type" => "text", "order" => "43", "group" => "Mail", ])->save();
         }
         
         $setting = $this->findSetting("regional.timezone_default");
         if (!$setting->exists) {
-            $setting->fill(["display_name" => "Timezone", "value" => "Asia/Kolkata", "details" => json_encode([
-                "default" => "Asia/Kolkata",
+            $setting->fill(["display_name" => "Timezone", "value" => "Africa/Nairobi", "details" => json_encode([
+                "default" => "Africa/Nairobi",
                 "options" => [
                     "Africa/Abidjan" => "Africa/Abidjan",
                     "Africa/Accra" => "Africa/Accra",
@@ -674,7 +674,7 @@ class SettingsTableSeeder extends Seeder
         if (!$setting->exists) {
             $setting->fill([
                 "display_name" => "Currency", 
-                "value" => "USD", 
+                "value" => "KES",
                 "type" => "text", 
                 "order" => "45", 
                 "group" => "Regional", 

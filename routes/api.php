@@ -45,7 +45,4 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //     return response()->json(['status' => true, 'data' => $request->all()]);
     // });
     
-    Route::get('send/message', [MessagesController::class, 'sendMessage']);
-    Route::get('get/messages', [MessagesController::class, 'getMessages']);
-
 });

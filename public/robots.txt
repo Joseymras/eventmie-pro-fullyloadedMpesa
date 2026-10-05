@@ -1,2 +1,5 @@
 User-agent: *
-Disallow:
+Disallow: /admin/
+Disallow: /voyager/
+
+Sitemap: https://wazievents.co.ke/sitemap.xml

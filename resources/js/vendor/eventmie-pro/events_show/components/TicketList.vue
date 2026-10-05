@@ -645,7 +645,7 @@
 
                         <authorize-net v-if="payment_method == 3 && total > 0 && register_user_id  && is_admin <= 0 && isAuthorizeNet > 0 (parseFloat(total) - parseFloat(promocode_reward)).toFixed(2) > 0"></authorize-net>
                         
-                        <pay-stack ref="pay_stack" v-if="payment_method == 6 && total > 0 && register_user_id  && is_admin <= 0 && is_pay_stack > 0 (parseFloat(total) - parseFloat(promocode_reward)).toFixed(2) > 0"></pay-stack>
+                        <pay-stack ref="pay_stack" v-if="payment_method == 6 && total > 0 && register_user_id && is_admin <= 0 && is_pay_stack > 0 && (parseFloat(total) - parseFloat(promocode_reward)).toFixed(2) > 0"></pay-stack>
 
                         <!--  CUSTOM -->
 

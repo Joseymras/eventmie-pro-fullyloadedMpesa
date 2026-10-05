@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Attendee;
 use App\Models\Ticket;
 use App\Models\Seat;
+use App\Models\PaystackTransaction;
 use App\Services\PaystackService;
 use Paystack;
 class BookingsController extends BaseBookingsController
@@ -1885,16 +1886,20 @@ class BookingsController extends BaseBookingsController
 
     protected function paystack($order = [], $currency = 'USD')
     {
-        $publicKey = app(PaystackService::class)->getPublicKey();
-        $reference = app(PaystackService::class)->generateReference($order, (string) now()->timestamp);
+        $service = app(PaystackService::class);
+        if (!$service->isEnabled() || !$service->isConfigured()) {
+            return response([
+                'status' => false,
+                'url' => route('eventmie.events_index'),
+                'message' => 'Paystack payments are not configured.',
+            ], Response::HTTP_OK);
+        }
 
         $paystack = [
-            'order'            => $order,
-            'payment_method'   => session('payment_method'),
-            'publicKey'        => $publicKey,
-            'reference'        => $reference,
-            'route'            => route('payment_paystack'),
+            'charge_route'     => route('paystack.charge'),
+            'redirect_route'   => route('payment_paystack'),
             'csrf_token'       => csrf_token(),
+            'mode'             => strpos($service->getPublicKey(), 'pk_test_') === 0 ? 'test' : 'live',
             'paystack'         => 1,
         ];
 
@@ -1919,9 +1924,105 @@ class BookingsController extends BaseBookingsController
         try {
             $response = $service->initializeTransaction($order, $booking, ['email' => session('payment_method')['customer_email'] ?? null]);
             return redirect()->away($response['authorization_url']);
-        } catch (\Throwable $exception) {
-            return redirect()->route('eventmie.events_index')->withErrors(['payment' => $exception->getMessage()]);
+        } catch (\Illuminate\Http\Client\ConnectionException|\RuntimeException $exception) {
+            \Illuminate\Support\Facades\Log::warning('Paystack checkout initialization failed.', [
+                'exception_class' => get_class($exception),
+            ]);
+            return redirect()->route('eventmie.events_index')->withErrors(['payment' => 'Unable to start Paystack checkout right now.']);
         }
+    }
+
+    public function chargePaystackMobileMoney(Request $request)
+    {
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'max:32'],
+        ]);
+
+        $order = session('pre_payment', []);
+        $booking = session('booking', []);
+        if (empty($order) || empty($booking) || empty(session('payment_method'))) {
+            return response()->json(['message' => 'Checkout session expired. Please start again.'], 409);
+        }
+
+        try {
+            $charge = app(PaystackService::class)->chargeMobileMoney(
+                $order,
+                $booking,
+                (string) (session('payment_method.customer_email') ?: data_get($booking, '0.customer_email')),
+                $validated['phone']
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        } catch (\Illuminate\Http\Client\ConnectionException|\RuntimeException $exception) {
+            \Illuminate\Support\Facades\Log::warning('Paystack M-Pesa charge failed.', [
+                'exception_class' => get_class($exception),
+            ]);
+            return response()->json(['message' => 'Unable to send the M-Pesa prompt right now. Please try again.'], 503);
+        }
+
+        return response()->json([
+            'reference' => $charge['reference'],
+            'message' => 'Check your phone and enter your M-Pesa PIN.',
+            'status_url' => route('paystack.status', ['reference' => $charge['reference']]),
+        ]);
+    }
+
+    public function paystackPaymentStatus(string $reference)
+    {
+        $transaction = PaystackTransaction::where('reference', $reference)
+            ->where('order_id', (string) data_get(session('booking'), '0.common_order'))
+            ->first();
+
+        if (!$transaction) {
+            return response()->json(['status' => 'not_found'], 404);
+        }
+
+        if ($transaction->status === 'success') {
+            return $this->completePaystackCheckout($reference, [
+                'verified' => true,
+                'reference' => $reference,
+                'message' => 'Payment verified.',
+            ]);
+        }
+
+        if (in_array($transaction->status, ['failed', 'expired', 'mismatch', 'refunded'], true)) {
+            return response()->json(['status' => $transaction->status]);
+        }
+
+        try {
+            $result = app(PaystackService::class)->verifyTransaction($reference);
+        } catch (\Illuminate\Http\Client\ConnectionException|\RuntimeException $exception) {
+            \Illuminate\Support\Facades\Log::warning('Paystack status verification failed.', [
+                'exception_class' => get_class($exception),
+            ]);
+            return response()->json([
+                'status' => 'unavailable',
+                'message' => 'Payment status is temporarily unavailable; checking again shortly.',
+            ], 503);
+        }
+
+        if (!$result['verified']) {
+            $transaction->refresh();
+            return response()->json(['status' => $transaction->status === 'failed' ? 'failed' : 'pending']);
+        }
+
+        return $this->completePaystackCheckout($reference, $result);
+    }
+
+    protected function completePaystackCheckout(string $reference, array $result)
+    {
+        if (empty(session('pre_payment')) || empty(session('booking'))) {
+            return response()->json(['status' => 'success', 'message' => 'Payment confirmed. Sign in to view your ticket.']);
+        }
+
+        $flag = [
+            'status' => true,
+            'transaction_id' => $reference,
+            'payer_reference' => data_get($result, 'data.customer.id'),
+            'message' => $result['message'] ?? 'Payment verified.',
+        ];
+
+        return $this->finish_checkout($flag);
     }
 
     /**
@@ -1943,14 +2044,7 @@ class BookingsController extends BaseBookingsController
             return redirect()->route('eventmie.mybookings_index')->withErrors(['payment' => $result['message']]);
         }
 
-        $flag = [
-            'status' => true,
-            'transaction_id' => $result['reference'],
-            'payer_reference' => $result['data']['customer']['id'] ?? null,
-            'message' => $result['message'],
-        ];
-
-        return $this->finish_checkout($flag);
+        return $this->completePaystackCheckout($reference, $result);
     }
 
     public function handlePaystackWebhook(Request $request)

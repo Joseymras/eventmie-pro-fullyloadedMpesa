@@ -49,6 +49,59 @@ Route::post('/paystack/webhook', '\App\Http\Controllers\Eventmie\BookingsControl
         \App\Http\Middleware\Authenticate::class,
         \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
     ]);
+
+Route::get('/health', function () {
+    $checks = ['app' => true, 'database' => false, 'queue' => false];
+
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $checks['database'] = true;
+    } catch (\Throwable $exception) {
+        \Illuminate\Support\Facades\Log::warning('Health database probe failed.');
+    }
+
+    try {
+        app('queue')->connection()->size();
+        $checks['queue'] = true;
+    } catch (\Throwable $exception) {
+        \Illuminate\Support\Facades\Log::warning('Health queue probe failed.');
+    }
+
+    $healthy = !in_array(false, $checks, true);
+
+    return response()->json([
+        'status' => $healthy ? 'ok' : 'degraded',
+        'checks' => $checks,
+    ], $healthy ? 200 : 503);
+})->name('health');
+
+Route::get('/sitemap.xml', function () {
+    $events = collect();
+    if (\Illuminate\Support\Facades\Schema::hasTable('events')
+        && \Illuminate\Support\Facades\Route::has('eventmie.events_show')) {
+        $events = Event::where('status', 1)
+            ->where('publish', 1)
+            ->orderByDesc('updated_at')
+            ->limit(1000)
+            ->get(['slug', 'updated_at']);
+    }
+
+    return response()
+        ->view('seo.sitemap', ['events' => $events])
+        ->header('Content-Type', 'application/xml; charset=UTF-8');
+})->name('sitemap');
+
+Route::view('/terms', 'legal.terms')->name('legal.terms');
+Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
+Route::view('/refunds', 'legal.refunds')->name('legal.refunds');
+Route::view('/contact', 'legal.contact')->name('legal.contact');
+
+Route::post('/paystack/charge', '\App\Http\Controllers\Eventmie\BookingsController@chargePaystackMobileMoney')
+    ->middleware('throttle:6,1')
+    ->name('paystack.charge');
+Route::get('/paystack/status/{reference}', '\App\Http\Controllers\Eventmie\BookingsController@paystackPaymentStatus')
+    ->middleware('throttle:30,1')
+    ->name('paystack.status');
     
 /* set local timezone */
 Route::post('/set/local_timezone', function (\Illuminate\Http\Request $request) {
@@ -392,7 +445,7 @@ Route::group([
 
         
     //paystack routes start
-    Route::post('/payment/paystack', '\App\Http\Controllers\Eventmie\BookingsController@redirectToGateway')->name('payment_paystack');
+    Route::post('/payment/paystack', '\App\Http\Controllers\Eventmie\BookingsController@redirectToGateway')->middleware('throttle:6,1')->name('payment_paystack');
     Route::get('/paystack/payment/callback', '\App\Http\Controllers\Eventmie\BookingsController@handleGatewayCallback')->name('paystack.callback');
     //paystack routes end
 });

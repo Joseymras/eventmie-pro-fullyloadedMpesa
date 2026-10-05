@@ -37,14 +37,23 @@ class DatabaseSeeder extends Seeder
         $this->call(SettingsTableSeeder::class);
 
         // custom addons seeder
-        \DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        $this->call(DataTypesTableSeederCustom::class);
-        $this->call(DataRowsTableSeederCustom::class);
-        $this->call(MenuItemsTableSeederCustom::class);
-        $this->call(PermissionsTableSeederCustom::class);
-        $this->call(PermissionRoleTableSeederCustom::class);
-        $this->call(RolesTableSeederCustom::class);
-        $this->call(SettingsTableSeederCustom::class);
-        \DB::statement('SET FOREIGN_KEY_CHECKS=1');   
+        $mysql = \DB::connection()->getDriverName() === 'mysql';
+        if ($mysql) {
+            \DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        }
+
+        try {
+            $this->call(DataTypesTableSeederCustom::class);
+            $this->call(DataRowsTableSeederCustom::class);
+            $this->call(MenuItemsTableSeederCustom::class);
+            $this->call(PermissionsTableSeederCustom::class);
+            $this->call(PermissionRoleTableSeederCustom::class);
+            $this->call(RolesTableSeederCustom::class);
+            $this->call(SettingsTableSeederCustom::class);
+        } finally {
+            if ($mysql) {
+                \DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            }
+        }
     }
 }

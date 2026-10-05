@@ -7,7 +7,33 @@
 @section('meta_image', '/storage/'.$event['thumbnail'])
 @section('meta_url', url()->current())
 
-    
+@section('stylesheet')
+<link rel="canonical" href="{{ route('eventmie.events_show', [$event->slug]) }}">
+@php
+    $eventSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Event',
+        'name' => $event->title,
+        'description' => strip_tags((string) $event->excerpt),
+        'startDate' => \Illuminate\Support\Carbon::parse($event->start_date.' '.$event->start_time)->toIso8601String(),
+        'endDate' => \Illuminate\Support\Carbon::parse($event->end_date.' '.$event->end_time)->toIso8601String(),
+        'eventStatus' => 'https://schema.org/EventScheduled',
+        'image' => [url('/storage/'.$event->thumbnail)],
+        'url' => route('eventmie.events_show', [$event->slug]),
+        'location' => [
+            '@type' => 'Place',
+            'name' => $event->venue ?: $event->city,
+            'address' => [
+                '@type' => 'PostalAddress',
+                'addressLocality' => $event->city,
+                'addressCountry' => 'KE',
+            ],
+        ],
+    ];
+@endphp
+<script type="application/ld+json">{!! json_encode($eventSchema, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) !!}</script>
+@endsection
+
 @section('content')
 
 <!--BANNER-->

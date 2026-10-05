@@ -92,6 +92,15 @@ class SettingsTableSeederCustom extends Seeder
             $setting->fill(["display_name" => "PayStack Public Key", "value" => "", "details"=> null, "type" => "text", "order" => "59", "group" => "Apps", ])->save();
         }
 
+        $setting = $this->findSetting("apps.paystack_enabled");
+        if (!$setting->exists) {
+            $setting->fill(["display_name" => "Enable Paystack", "value" => "0", "details" => json_encode([
+                "validation" => [
+                    "rule" => "in:0,1,on,off"
+                ]
+            ]), "type" => "checkbox", "order" => "58", "group" => "Apps", ])->save();
+        }
+
         $setting = $this->findSetting("apps.paystack_secret_key");
         if (!$setting->exists) {
             $setting->fill(["display_name" => "PayStack Secret Key", "value" => "", "details"=> null, "type" => "text", "order" => "60", "group" => "Apps", ])->save();

@@ -14,6 +14,7 @@ use App\Models\Ticket;
 use App\Models\Booking;
 use Illuminate\Database\Eloquent\Builder;
 use App\Charts\ReviewChart;
+use App\Services\PaystackService;
 
 class EventsController extends BaseEventsController
 {
@@ -94,7 +95,8 @@ class EventsController extends BaseEventsController
             $extra['is_stripe_direct'] = $this->checkStripeAccount($event);
         }
             
-        if(!empty(setting('apps.paystack_public_key')) && !empty(setting('apps.paystack_secret_key')) && !empty(setting('apps.paystack_merchant_email')))
+        $paystack = app(PaystackService::class);
+        if($paystack->isEnabled() && $paystack->isConfigured())
             $extra['is_pay_stack'] = true;
         
 
